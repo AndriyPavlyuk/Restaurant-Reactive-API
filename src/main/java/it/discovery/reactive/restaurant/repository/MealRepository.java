@@ -15,9 +15,9 @@ public class MealRepository {
 	
 	public MealRepository() {
 		meals = new ConcurrentHashMap<>();
-		meals.put("coffee", new Meal("coffee", 10, Duration.ofMillis(400)));
-		meals.put("soup", new Meal("soup", 50, Duration.ofMillis(800)));
-		meals.put("beef", new Meal("beef", 150, Duration.ofMillis(1000)));
+		meals.put("coffee", new Meal("coffee", 10, Duration.ofMillis(200)));
+		meals.put("soup", new Meal("soup", 50, Duration.ofMillis(400)));
+		meals.put("beef", new Meal("beef", 150, Duration.ofMillis(600)));
 	}
 	
 	public Set<String> getMealNames() {
@@ -26,8 +26,8 @@ public class MealRepository {
 
 	public Meal getMeal(String name) {
 		try {
-			Thread.sleep(2000);
-			
+			Thread.sleep(400);
+
 			return meals.get(name);
 		} catch (InterruptedException e) {
 			log.error(e.getMessage(), e);

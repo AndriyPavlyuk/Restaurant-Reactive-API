@@ -55,14 +55,19 @@ public class Starter {
             while (attempts <= 3 && orderResponses == null) {
                 try {
                     orderResponses = serveCustomer(customer);
-                } catch (InterruptedException | ExecutionException | TimeoutException e) {
-                    attempts++;
-                } catch (NoMealException ex) {
-                    System.out.println("No orders prepared");
+                } catch (ExecutionException e) {
+                    if (e.getCause() instanceof NoAvailableWaiterException) {
+                        attempts++;
+                    } else if (e.getCause() instanceof NoMealException) {
+                        System.out.println("No orders prepared");
+                        break;
+                    }
+                } catch (InterruptedException | TimeoutException e) {
+                    System.out.println("Timeout for customer " + customer.getName());
                 }
             }
             if (orderResponses != null) {
-                System.out.println("Got orders " + orderResponses);
+                System.out.println("Customer " + customer.getName() + ".Got orders " + orderResponses);
             }
         });
     }
@@ -70,18 +75,12 @@ public class Starter {
     private List<OrderResponse> serveCustomer(Customer customer) throws InterruptedException, ExecutionException, TimeoutException {
         return CompletableFuture.supplyAsync(waiterService::acquire)
                 .thenApply(waiter -> waiterService.order(customer, waiter, mealNames))
-                .thenApply(waiterService::take)
+                .thenApplyAsync(waiterService::take)
                 .whenComplete((orderResponses, ex) -> {
-                    if (ex != null) {
-                        System.err.println("Error: " + ex.getMessage());
-                        if (ex instanceof NoAvailableWaiterException) {
-                            throw (NoAvailableWaiterException) ex;
-                        }
-                    }
                     if (orderResponses != null) {
                         waiterService.release(orderResponses.get(0).getWaiter());
                     }
-                }).get(5, TimeUnit.SECONDS);
+                }).get(3, TimeUnit.SECONDS);
     }
 
     private void sendFeedback(Customer customer) {
