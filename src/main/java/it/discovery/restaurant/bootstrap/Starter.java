@@ -4,7 +4,7 @@ import it.discovery.reactive.restaurant.repository.MealRepository;
 import it.discovery.restaurant.exception.NoAvailableWaiterException;
 import it.discovery.restaurant.exception.NoMealException;
 import it.discovery.restaurant.model.Customer;
-import it.discovery.restaurant.model.OrderResponse;
+import it.discovery.restaurant.model.OrderItem;
 import it.discovery.restaurant.service.CookService;
 import it.discovery.restaurant.service.WaiterService;
 import it.discovery.restaurant.social.FacebookConnector;
@@ -49,12 +49,12 @@ public class Starter {
         List<Customer> customers = Stream.iterate(1, i -> i + 1).limit(20).map(i -> new Customer("Donald" + i))
                 .collect(Collectors.toList());
         customers.forEach(customer -> {
-            List<OrderResponse> orderResponses = null;
+            List<OrderItem> orderRespons = null;
             int attempts = 0;
 
-            while (attempts <= 3 && orderResponses == null) {
+            while (attempts <= 3 && orderRespons == null) {
                 try {
-                    orderResponses = serveCustomer(customer);
+                    orderRespons = serveCustomer(customer);
                 } catch (ExecutionException e) {
                     if (e.getCause() instanceof NoAvailableWaiterException) {
                         attempts++;
@@ -66,19 +66,19 @@ public class Starter {
                     System.out.println("Timeout for customer " + customer.getName());
                 }
             }
-            if (orderResponses != null) {
-                System.out.println("Customer " + customer.getName() + ".Got orders " + orderResponses);
+            if (orderRespons != null) {
+                System.out.println("Customer " + customer.getName() + ".Got orders " + orderRespons);
             }
         });
     }
 
-    private List<OrderResponse> serveCustomer(Customer customer) throws InterruptedException, ExecutionException, TimeoutException {
+    private List<OrderItem> serveCustomer(Customer customer) throws InterruptedException, ExecutionException, TimeoutException {
         return CompletableFuture.supplyAsync(waiterService::acquire)
                 .thenApply(waiter -> waiterService.order(customer, waiter, mealNames))
                 .thenApplyAsync(waiterService::take)
                 .whenComplete((orderResponses, ex) -> {
                     if (orderResponses != null) {
-                        waiterService.release(orderResponses.get(0).getWaiter());
+                        waiterService.release(orderResponses.get(0).getOrder().getWaiter());
                     }
                 }).get(3, TimeUnit.SECONDS);
     }

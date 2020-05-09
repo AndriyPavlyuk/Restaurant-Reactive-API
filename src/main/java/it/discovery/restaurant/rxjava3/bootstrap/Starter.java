@@ -3,18 +3,15 @@ package it.discovery.restaurant.rxjava3.bootstrap;
 import io.reactivex.rxjava3.core.Observable;
 import it.discovery.restaurant.exception.NoAvailableWaiterException;
 import it.discovery.restaurant.model.Customer;
-import it.discovery.restaurant.model.OrderResponse;
+import it.discovery.restaurant.model.OrderItem;
 import it.discovery.restaurant.rxjava3.repository.MealRepository;
 import it.discovery.restaurant.rxjava3.service.CookService;
 import it.discovery.restaurant.rxjava3.service.WaiterService;
 import it.discovery.restaurant.social.FacebookConnector;
 import it.discovery.restaurant.social.SiteConnector;
 
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class Starter {
 
@@ -43,23 +40,26 @@ public class Starter {
     }
 
     private void start() {
-        List<Customer> customers = Stream.iterate(1, i -> i + 1).limit(20).map(i -> new Customer("Donald" + i))
-                .collect(Collectors.toList());
-        customers.forEach(customer -> {
-            serveCustomer(customer)
-                    .retry(3, ex -> ex instanceof NoAvailableWaiterException)
-                    .subscribe(response -> System.out.println(
-                            "Customer " + customer.getName() + ".Got orders " + response),
-                            err -> {
-                                System.err.println("Error: " + err);
+        Observable.range(1, 20)
+                .map(i -> new Customer("Donald" + i))
+                .flatMap(this::serveCustomer)
+                .retry(3, ex -> ex instanceof NoAvailableWaiterException)
+                .subscribe(orderItem -> System.out.println(
+                        "Customer " + orderItem.getOrder().getCustomer().getName() + ".Got orders " + orderItem),
+                        err -> {
+                            System.err.println("Error: " + err);
+                            if (err instanceof NoAvailableWaiterException) {
+                                Customer customer = ((NoAvailableWaiterException) err).getCustomer();
                                 sendFeedback(customer);
-                            });
-        });
+                            }
+                        });
+
     }
 
-    private Observable<OrderResponse> serveCustomer(Customer customer) {
-        return waiterService.acquire()
+    private Observable<OrderItem> serveCustomer(Customer customer) {
+        return waiterService.acquire(customer)
                 .map(waiter -> waiterService.order(customer, waiter, mealNames))
+                .doOnNext(order -> waiterService.release(order.getWaiter()))
                 .flatMap(waiterService::take)
                 .timeout(3, TimeUnit.SECONDS);
     }

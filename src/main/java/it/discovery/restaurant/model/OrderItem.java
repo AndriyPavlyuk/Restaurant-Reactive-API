@@ -9,9 +9,9 @@ import lombok.ToString;
 @Setter
 @RequiredArgsConstructor
 @ToString
-public class OrderResponse {
+public class OrderItem {
 
     private final Meal meal;
 
-    private final Waiter waiter;
+    private final Order order;
 }

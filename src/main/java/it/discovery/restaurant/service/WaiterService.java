@@ -3,7 +3,7 @@ package it.discovery.restaurant.service;
 import it.discovery.restaurant.exception.NoAvailableWaiterException;
 import it.discovery.restaurant.model.Customer;
 import it.discovery.restaurant.model.Order;
-import it.discovery.restaurant.model.OrderResponse;
+import it.discovery.restaurant.model.OrderItem;
 import it.discovery.restaurant.model.Waiter;
 
 import java.util.Collection;
@@ -33,7 +33,7 @@ public class WaiterService {
 	 */
 	public Waiter acquire() {
 		if (availableWaiters.isEmpty()) {
-			throw new NoAvailableWaiterException();
+			throw new NoAvailableWaiterException(null);
 		}
 
 		Waiter waiter = availableWaiters.iterator().next();
@@ -50,9 +50,9 @@ public class WaiterService {
 		return new Order(waiter, customer, mealNames);
 	}
 
-	public List<OrderResponse> take(Order order) {
+	public List<OrderItem> take(Order order) {
 		return order.getMealNames().stream()
-				.map(mealName -> new OrderResponse(cookService.cook(mealName), order.getWaiter()))
+				.map(mealName -> new OrderItem(cookService.cook(mealName), order))
 				.collect(Collectors.toList());
 	}
 

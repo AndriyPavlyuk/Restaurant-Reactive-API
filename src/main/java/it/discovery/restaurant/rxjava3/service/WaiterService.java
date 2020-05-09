@@ -4,7 +4,7 @@ import io.reactivex.rxjava3.core.Observable;
 import it.discovery.restaurant.exception.NoAvailableWaiterException;
 import it.discovery.restaurant.model.Customer;
 import it.discovery.restaurant.model.Order;
-import it.discovery.restaurant.model.OrderResponse;
+import it.discovery.restaurant.model.OrderItem;
 import it.discovery.restaurant.model.Waiter;
 
 import java.util.Collection;
@@ -29,11 +29,12 @@ public class WaiterService {
     /**
      * Acquire first available waiter
      *
+     * @param customer
      * @return
      */
-    public Observable<Waiter> acquire() {
+    public Observable<Waiter> acquire(Customer customer) {
         if (availableWaiters.isEmpty()) {
-            return Observable.error(NoAvailableWaiterException::new);
+            return Observable.error(() -> new NoAvailableWaiterException(customer));
         }
 
         Waiter waiter = availableWaiters.iterator().next();
@@ -50,10 +51,10 @@ public class WaiterService {
         return new Order(waiter, customer, mealNames);
     }
 
-    public Observable<OrderResponse> take(Order order) {
+    public Observable<OrderItem> take(Order order) {
         return Observable.fromIterable(order.getMealNames())
                 .flatMap(cookService::cook)
-                .map(meal -> new OrderResponse(meal, order.getWaiter()));
+                .map(meal -> new OrderItem(meal, order));
     }
 
 }
