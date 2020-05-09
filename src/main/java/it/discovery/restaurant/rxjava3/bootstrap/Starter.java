@@ -1,6 +1,8 @@
 package it.discovery.restaurant.rxjava3.bootstrap;
 
 import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.core.Scheduler;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.PublishSubject;
 import io.reactivex.rxjava3.subjects.Subject;
 import it.discovery.restaurant.exception.NoAvailableWaiterException;
@@ -13,9 +15,12 @@ import it.discovery.restaurant.social.FacebookConnector;
 import it.discovery.restaurant.social.SiteConnector;
 
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class Starter {
+    private static final int NUM_SEATS = 10;
 
     private final CookService cookService;
 
@@ -29,6 +34,8 @@ public class Starter {
 
     private final Subject<String> feedbackHandler;
 
+    private final Scheduler scheduler;
+
     public Starter() {
         MealRepository mealRepository = new MealRepository();
         cookService = new CookService(mealRepository);
@@ -40,15 +47,24 @@ public class Starter {
         feedbackHandler = PublishSubject.create();
         feedbackHandler.subscribe(siteConnector::saveFeedback);
         feedbackHandler.subscribe(facebookConnector::saveFeedback);
+
+        ExecutorService executorService = Executors.newFixedThreadPool(NUM_SEATS);
+        scheduler = Schedulers.from(executorService, true);
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         Starter starter = new Starter();
-        starter.start();
+        try {
+            starter.start();
+        } finally {
+            starter.scheduler.shutdown();
+            starter.waiterService.close();
+        }
     }
 
     private void start() {
         Observable.range(1, 20)
+                .observeOn(scheduler)
                 .map(i -> new Customer("Donald" + i))
                 .flatMap(this::serveCustomer)
                 .retry(3, ex -> ex instanceof NoAvailableWaiterException)

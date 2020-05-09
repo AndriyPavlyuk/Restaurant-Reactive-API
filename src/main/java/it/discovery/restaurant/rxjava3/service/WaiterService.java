@@ -1,6 +1,8 @@
 package it.discovery.restaurant.rxjava3.service;
 
 import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.core.Scheduler;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 import it.discovery.restaurant.exception.NoAvailableWaiterException;
 import it.discovery.restaurant.model.Customer;
 import it.discovery.restaurant.model.Order;
@@ -10,12 +12,16 @@ import it.discovery.restaurant.model.Waiter;
 import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-public class WaiterService {
+public class WaiterService implements AutoCloseable {
 
     private final Set<Waiter> availableWaiters;
 
     private final CookService cookService;
+
+    private final Scheduler scheduler;
 
     public WaiterService(CookService cookService) {
         availableWaiters = new CopyOnWriteArraySet<>();
@@ -24,6 +30,9 @@ public class WaiterService {
         availableWaiters.add(new Waiter(1, "Samanta"));
         availableWaiters.add(new Waiter(2, "Ann"));
         availableWaiters.add(new Waiter(3, "Tiffany"));
+
+        ExecutorService executorService = Executors.newFixedThreadPool(availableWaiters.size());
+        scheduler = Schedulers.from(executorService, true);
     }
 
     /**
@@ -57,4 +66,8 @@ public class WaiterService {
                 .map(meal -> new OrderItem(meal, order));
     }
 
+    @Override
+    public void close() throws Exception {
+        scheduler.shutdown();
+    }
 }
