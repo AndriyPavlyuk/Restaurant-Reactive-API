@@ -19,7 +19,7 @@ public class RxJavaStarter {
 //                }).subscribe(System.out::println);
         Observable.just('i', 't')
                 .map(String::valueOf)
-                .scan("", (s1, s2) -> s1 + s2)
+                .reduce("", (s1, s2) -> s1 + s2)
                 .subscribe(System.out::println);
     }
 }
