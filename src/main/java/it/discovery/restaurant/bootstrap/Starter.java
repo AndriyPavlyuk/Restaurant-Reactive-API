@@ -36,10 +36,9 @@ public class Starter {
                 .collect(Collectors.toList());
         customers.forEach(customer -> {
             Future<Waiter> future = executorService.submit(waiterService::acquire);
-            //Waiter waiter = waiterService.acquire();
             int attempts = 0;
             Waiter waiter = null;
-            while (attempts <= 3) {
+            while (attempts <= 3 && waiter == null) {
                 try {
                     waiter = future.get(3, TimeUnit.SECONDS);
                 } catch (InterruptedException | ExecutionException | TimeoutException e) {
