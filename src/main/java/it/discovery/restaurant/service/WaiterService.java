@@ -31,9 +31,16 @@ public class WaiterService {
 	 * @return
 	 */
 	public Waiter acquire() {
-		if(availableWaiters.isEmpty()) {
-			return null;
+		while(availableWaiters.isEmpty()) {
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {
+				throw new RuntimeException(e);
+			}
 		}
+//		if(availableWaiters.isEmpty()) {
+//			return null;
+//		}
 		
 		Waiter waiter = availableWaiters.iterator().next();
 		availableWaiters.remove(waiter);
