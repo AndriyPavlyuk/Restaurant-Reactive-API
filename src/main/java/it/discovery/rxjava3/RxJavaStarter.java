@@ -18,6 +18,8 @@ public class RxJavaStarter {
 //                    return v;
 //                }).subscribe(System.out::println);
         Observable.just('i', 't')
+                .map(String::valueOf)
+                .scan("", (s1, s2) -> s1 + s2)
                 .subscribe(System.out::println);
     }
 }
