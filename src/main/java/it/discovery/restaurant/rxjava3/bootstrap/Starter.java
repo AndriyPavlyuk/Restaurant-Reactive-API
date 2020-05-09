@@ -1,6 +1,8 @@
 package it.discovery.restaurant.rxjava3.bootstrap;
 
 import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.subjects.PublishSubject;
+import io.reactivex.rxjava3.subjects.Subject;
 import it.discovery.restaurant.exception.NoAvailableWaiterException;
 import it.discovery.restaurant.model.Customer;
 import it.discovery.restaurant.model.OrderItem;
@@ -25,6 +27,8 @@ public class Starter {
 
     private final Set<String> mealNames;
 
+    private final Subject<String> feedbackHandler;
+
     public Starter() {
         MealRepository mealRepository = new MealRepository();
         cookService = new CookService(mealRepository);
@@ -32,6 +36,10 @@ public class Starter {
         facebookConnector = new FacebookConnector();
         siteConnector = new SiteConnector();
         mealNames = mealRepository.getMealNames();
+
+        feedbackHandler = PublishSubject.create();
+        feedbackHandler.subscribe(siteConnector::saveFeedback);
+        feedbackHandler.subscribe(facebookConnector::saveFeedback);
     }
 
     public static void main(String[] args) {
@@ -67,7 +75,6 @@ public class Starter {
     private void sendFeedback(Customer customer) {
         String feedback = "Customer " + customer.getName() +
                 " is unhappy because no available waiters";
-        siteConnector.saveFeedback(feedback);
-        facebookConnector.saveFeedback(feedback);
+        feedbackHandler.onNext(feedback);
     }
 }
