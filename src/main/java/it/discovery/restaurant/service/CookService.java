@@ -1,12 +1,13 @@
 package it.discovery.restaurant.service;
 
-import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
-
 import it.discovery.reactive.restaurant.repository.MealRepository;
+import it.discovery.restaurant.exception.NoMealException;
 import it.discovery.restaurant.model.Cook;
 import it.discovery.restaurant.model.Meal;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 @Slf4j
 public class CookService {
@@ -28,7 +29,7 @@ public class CookService {
 		Meal meal = mealRepository.getMeal(name);
 		
 		if(meal == null) {
-			return null;
+			throw new NoMealException();
 		}
 
 		while(availableCooks.isEmpty()) {
