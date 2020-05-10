@@ -1,9 +1,5 @@
 package it.discovery.restaurant.reactor.bootstrap;
 
-import io.reactivex.rxjava3.core.BackpressureOverflowStrategy;
-import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.core.Scheduler;
-import io.reactivex.rxjava3.schedulers.Schedulers;
 import it.discovery.restaurant.exception.NoAvailableWaiterException;
 import it.discovery.restaurant.model.Customer;
 import it.discovery.restaurant.model.OrderItem;
@@ -13,8 +9,11 @@ import it.discovery.restaurant.reactor.service.CookService;
 import it.discovery.restaurant.reactor.service.WaiterService;
 import it.discovery.restaurant.social.FacebookConnector;
 import it.discovery.restaurant.social.SiteConnector;
+import reactor.core.publisher.BufferOverflowStrategy;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
+import reactor.core.scheduler.Scheduler;
+import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
 import java.util.Set;
@@ -55,7 +54,7 @@ public class ReactorStarter {
         feedbackHandler.subscribe(facebookConnector::saveFeedback);
 
         executorService = Executors.newFixedThreadPool(NUM_SEATS);
-        scheduler = Schedulers.from(executorService, true);
+        scheduler = Schedulers.fromExecutor(executorService);
     }
 
     public static void main(String[] args) throws Exception {
@@ -67,19 +66,23 @@ public class ReactorStarter {
         }
     }
 
-    private void close() throws Exception {
+    private void close() {
         executorService.shutdown();
-        waiterService.close();
-        cookService.close();
+        try {
+            waiterService.close();
+            cookService.close();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void start() {
-        Flowable.range(1, 20)
-                .observeOn(scheduler)
+        Flux.range(1, 20)
+                .publishOn(scheduler)
                 .map(i -> new Customer("Donald" + i))
                 .map(customer -> new Visit(customer, now()))
-                .onBackpressureBuffer(10, () -> System.out.println("Queue overflow"),
-                        BackpressureOverflowStrategy.DROP_LATEST)
+                .onBackpressureBuffer(10, visit -> System.out.println("Queue overflow"),
+                        BufferOverflowStrategy.DROP_LATEST)
                 .flatMap(this::serveCustomer)
                 .retry(3, ex -> ex instanceof NoAvailableWaiterException)
                 .doAfterTerminate(this::close)
