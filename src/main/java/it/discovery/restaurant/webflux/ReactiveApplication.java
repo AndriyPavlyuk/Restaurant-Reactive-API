@@ -1,4 +1,4 @@
-package it.discovery.reactive.restaurant.spring;
+package it.discovery.restaurant.webflux;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
