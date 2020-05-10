@@ -1,6 +1,7 @@
 package it.discovery.restaurant.rxjava3.bootstrap;
 
-import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.core.BackpressureOverflowStrategy;
+import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Scheduler;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.PublishSubject;
@@ -69,18 +70,21 @@ public class Starter {
     private void close() throws Exception {
         executorService.shutdown();
         waiterService.close();
+        cookService.close();
     }
 
     private void start() {
-        Observable.range(1, 20)
+        Flowable.range(1, 20)
                 .observeOn(scheduler)
                 .map(i -> new Customer("Donald" + i))
                 .map(customer -> new Visit(customer, now()))
+                .onBackpressureBuffer(10, () -> System.out.println("Queue overflow"),
+                        BackpressureOverflowStrategy.DROP_LATEST)
                 .flatMap(this::serveCustomer)
                 .retry(3, ex -> ex instanceof NoAvailableWaiterException)
                 .doAfterTerminate(this::close)
                 .subscribe(orderItem -> System.out.println(
-                        "Customer " + orderItem.getOrder().getCustomer().getName() + ".Got orders " + orderItem),
+                        "Customer " + orderItem.getOrder().getCustomer().getName() + " got orders " + orderItem),
                         err -> {
                             System.err.println("Error: " + err);
                             if (err instanceof NoAvailableWaiterException) {
@@ -91,7 +95,7 @@ public class Starter {
 
     }
 
-    private Observable<OrderItem> serveCustomer(Visit visit) {
+    private Flowable<OrderItem> serveCustomer(Visit visit) {
         return waiterService.acquire(visit)
                 .map(waiter -> waiterService.order(visit.getCustomer(), waiter, mealNames))
                 .doOnNext(order -> waiterService.release(order.getWaiter()))

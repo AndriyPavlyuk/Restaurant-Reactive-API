@@ -1,6 +1,6 @@
 package it.discovery.restaurant.rxjava3.repository;
 
-import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.core.Flowable;
 import it.discovery.restaurant.exception.NoMealException;
 import it.discovery.restaurant.model.Meal;
 import lombok.extern.slf4j.Slf4j;
@@ -27,11 +27,11 @@ public class MealRepository {
 		return meals.keySet();
 	}
 
-	public Observable<Meal> getMeal(String name) {
+	public Flowable<Meal> getMeal(String name) {
 		if (!meals.containsKey(name)) {
-			return Observable.error(NoMealException::new);
+			return Flowable.error(NoMealException::new);
 		}
-		return Observable.just(meals.get(name))
+		return Flowable.just(meals.get(name))
 				.delay(400, TimeUnit.MILLISECONDS);
 	}
 }

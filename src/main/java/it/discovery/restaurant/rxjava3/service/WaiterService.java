@@ -1,6 +1,6 @@
 package it.discovery.restaurant.rxjava3.service;
 
-import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Scheduler;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import it.discovery.restaurant.exception.NoAvailableWaiterException;
@@ -46,19 +46,19 @@ public class WaiterService implements AutoCloseable {
      * @param visit
      * @return
      */
-    public Observable<Waiter> acquire(Visit visit) {
+    public Flowable<Waiter> acquire(Visit visit) {
         if (visit.getCreated().isAfter(workEndTime)) {
-            return Observable.error(RestaurantClosingException::new);
+            return Flowable.error(RestaurantClosingException::new);
         }
 
         if (availableWaiters.isEmpty()) {
-            return Observable.error(() -> new NoAvailableWaiterException(visit.getCustomer()));
+            return Flowable.error(() -> new NoAvailableWaiterException(visit.getCustomer()));
         }
 
         Waiter waiter = availableWaiters.iterator().next();
         availableWaiters.remove(waiter);
 
-        return Observable.just(waiter);
+        return Flowable.just(waiter);
     }
 
     public void release(Waiter waiter) {
@@ -69,8 +69,8 @@ public class WaiterService implements AutoCloseable {
         return new Order(waiter, customer, mealNames);
     }
 
-    public Observable<OrderItem> take(Order order) {
-        return Observable.fromIterable(order.getMealNames())
+    public Flowable<OrderItem> take(Order order) {
+        return Flowable.fromIterable(order.getMealNames())
                 .flatMap(cookService::cook)
                 .map(meal -> new OrderItem(meal, order));
     }

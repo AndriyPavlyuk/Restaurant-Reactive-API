@@ -1,14 +1,14 @@
 package it.discovery.restaurant.model;
 
-import java.time.Duration;
-
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.ToString;
 
-@Getter 
+import java.time.Duration;
+
+@Getter
 @AllArgsConstructor
-@ToString
+@ToString(exclude = "duration")
 public class Meal {
 	
 	private String name;

@@ -1,14 +1,14 @@
 package it.discovery.restaurant.model;
 
-import java.util.Collection;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
+import java.util.Collection;
+
 @RequiredArgsConstructor
 @Getter
-@ToString
+@ToString(of = "waiter")
 public class Order {
 	
 	private final Waiter waiter;
