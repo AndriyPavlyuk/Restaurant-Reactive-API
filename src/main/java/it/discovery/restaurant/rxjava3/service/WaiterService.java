@@ -4,11 +4,10 @@ import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.core.Scheduler;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import it.discovery.restaurant.exception.NoAvailableWaiterException;
-import it.discovery.restaurant.model.Customer;
-import it.discovery.restaurant.model.Order;
-import it.discovery.restaurant.model.OrderItem;
-import it.discovery.restaurant.model.Waiter;
+import it.discovery.restaurant.exception.RestaurantClosingException;
+import it.discovery.restaurant.model.*;
 
+import java.time.LocalTime;
 import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -23,6 +22,10 @@ public class WaiterService implements AutoCloseable {
 
     private final Scheduler scheduler;
 
+    private final ExecutorService executorService;
+
+    private final LocalTime workEndTime;
+
     public WaiterService(CookService cookService) {
         availableWaiters = new CopyOnWriteArraySet<>();
         this.cookService = cookService;
@@ -31,19 +34,25 @@ public class WaiterService implements AutoCloseable {
         availableWaiters.add(new Waiter(2, "Ann"));
         availableWaiters.add(new Waiter(3, "Tiffany"));
 
-        ExecutorService executorService = Executors.newFixedThreadPool(availableWaiters.size());
+        executorService = Executors.newFixedThreadPool(availableWaiters.size());
         scheduler = Schedulers.from(executorService, true);
+
+        workEndTime = LocalTime.of(23, 0);
     }
 
     /**
      * Acquire first available waiter
      *
-     * @param customer
+     * @param visit
      * @return
      */
-    public Observable<Waiter> acquire(Customer customer) {
+    public Observable<Waiter> acquire(Visit visit) {
+        if (visit.getCreated().isAfter(workEndTime)) {
+            return Observable.error(RestaurantClosingException::new);
+        }
+
         if (availableWaiters.isEmpty()) {
-            return Observable.error(() -> new NoAvailableWaiterException(customer));
+            return Observable.error(() -> new NoAvailableWaiterException(visit.getCustomer()));
         }
 
         Waiter waiter = availableWaiters.iterator().next();
@@ -68,6 +77,6 @@ public class WaiterService implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
-        scheduler.shutdown();
+        executorService.shutdown();
     }
 }

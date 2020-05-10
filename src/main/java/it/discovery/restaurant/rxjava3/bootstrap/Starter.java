@@ -8,6 +8,7 @@ import io.reactivex.rxjava3.subjects.Subject;
 import it.discovery.restaurant.exception.NoAvailableWaiterException;
 import it.discovery.restaurant.model.Customer;
 import it.discovery.restaurant.model.OrderItem;
+import it.discovery.restaurant.model.Visit;
 import it.discovery.restaurant.rxjava3.repository.MealRepository;
 import it.discovery.restaurant.rxjava3.service.CookService;
 import it.discovery.restaurant.rxjava3.service.WaiterService;
@@ -18,6 +19,8 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+
+import static java.time.LocalTime.now;
 
 public class Starter {
     private static final int NUM_SEATS = 10;
@@ -36,6 +39,8 @@ public class Starter {
 
     private final Scheduler scheduler;
 
+    private final ExecutorService executorService;
+
     public Starter() {
         MealRepository mealRepository = new MealRepository();
         cookService = new CookService(mealRepository);
@@ -48,7 +53,7 @@ public class Starter {
         feedbackHandler.subscribe(siteConnector::saveFeedback);
         feedbackHandler.subscribe(facebookConnector::saveFeedback);
 
-        ExecutorService executorService = Executors.newFixedThreadPool(NUM_SEATS);
+        executorService = Executors.newFixedThreadPool(NUM_SEATS);
         scheduler = Schedulers.from(executorService, true);
     }
 
@@ -57,17 +62,23 @@ public class Starter {
         try {
             starter.start();
         } finally {
-            starter.scheduler.shutdown();
-            starter.waiterService.close();
+            //starter.close();
         }
+    }
+
+    private void close() throws Exception {
+        executorService.shutdown();
+        waiterService.close();
     }
 
     private void start() {
         Observable.range(1, 20)
                 .observeOn(scheduler)
                 .map(i -> new Customer("Donald" + i))
+                .map(customer -> new Visit(customer, now()))
                 .flatMap(this::serveCustomer)
                 .retry(3, ex -> ex instanceof NoAvailableWaiterException)
+                .doAfterTerminate(this::close)
                 .subscribe(orderItem -> System.out.println(
                         "Customer " + orderItem.getOrder().getCustomer().getName() + ".Got orders " + orderItem),
                         err -> {
@@ -80,9 +91,9 @@ public class Starter {
 
     }
 
-    private Observable<OrderItem> serveCustomer(Customer customer) {
-        return waiterService.acquire(customer)
-                .map(waiter -> waiterService.order(customer, waiter, mealNames))
+    private Observable<OrderItem> serveCustomer(Visit visit) {
+        return waiterService.acquire(visit)
+                .map(waiter -> waiterService.order(visit.getCustomer(), waiter, mealNames))
                 .doOnNext(order -> waiterService.release(order.getWaiter()))
                 .flatMap(waiterService::take)
                 .timeout(3, TimeUnit.SECONDS);
