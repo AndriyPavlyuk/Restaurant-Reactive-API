@@ -6,6 +6,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
 
+import java.time.Duration;
+
 @RestController
 @RequestMapping("util")
 public class UtilController {
@@ -14,6 +16,7 @@ public class UtilController {
     public Flux<String> latinSymbols() {
         return Flux.range('a', 'z' - 'a' + 1)
                 .map(Character::toChars)
-                .map(String::valueOf);
+                .map(String::valueOf)
+                .delayElements(Duration.ofSeconds(1));
     }
 }
